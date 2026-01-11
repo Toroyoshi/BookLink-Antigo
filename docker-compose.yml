@@ -1,0 +1,123 @@
+services:
+  user-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user
+      POSTGRES_DB: userdb
+    ports: ["5433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d userdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  catalog-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: catalog
+      POSTGRES_PASSWORD: catalog
+      POSTGRES_DB: catalogdb
+    ports: ["5434:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U catalog -d catalogdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  loan-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: loan
+      POSTGRES_PASSWORD: loan
+      POSTGRES_DB: loandb
+    ports: ["5435:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loan -d loandb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  payment-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: payment
+      POSTGRES_DB: paymentdb
+    ports: ["5436:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payment -d paymentdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  user-service:
+    build:
+      context: .
+      dockerfile: user-service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://user:user@user-db:5432/userdb
+      JWT_SECRET: "dev-secret-change-me"
+      JWT_ALG: "HS256"
+      TOKEN_EXPIRE_MINUTES: "240"
+    ports: ["8001:8000"]
+    depends_on:
+      user-db:
+        condition: service_healthy
+
+  catalog-service:
+    build:
+      context: .
+      dockerfile: catalog-service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://catalog:catalog@catalog-db:5432/catalogdb
+      JWT_SECRET: "dev-secret-change-me"
+      JWT_ALG: "HS256"
+      USER_SERVICE_URL: http://user-service:8000
+    ports: ["8002:8000"]
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+
+  loan-service:
+    build:
+      context: .
+      dockerfile: loan-service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://loan:loan@loan-db:5432/loandb
+      JWT_SECRET: "dev-secret-change-me"
+      JWT_ALG: "HS256"
+      CATALOG_SERVICE_URL: http://catalog-service:8000
+      USER_SERVICE_URL: http://user-service:8000
+      FINE_PER_DAY_EUR: "0.50"
+      LOAN_DAYS_STUDENT: "14"
+      LOAN_DAYS_DOCENTE: "30"
+      LOAN_DAYS_STAFF: "30"
+      INTERNAL_SERVICE_TOKEN: "internal-dev-token"
+    ports: ["8003:8000"]
+    depends_on:
+      loan-db:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://payment:payment@payment-db:5432/paymentdb
+      JWT_SECRET: "dev-secret-change-me"
+      JWT_ALG: "HS256"
+      LOAN_SERVICE_URL: http://loan-service:8000
+      INTERNAL_SERVICE_TOKEN: "internal-dev-token"
+    ports: ["8004:8000"]
+    depends_on:
+      payment-db:
+        condition: service_healthy
+      loan-service:
+        condition: service_started
