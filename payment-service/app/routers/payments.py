@@ -41,12 +41,13 @@ async def confirm_payment(payment_id: int, current=Depends(get_current_user), db
     # Simula confirmação (em produção: gateway externo)
     p.status = "CONFIRMED"
     p.paid_at = datetime.now(timezone.utc)
-    db.commit()
-    db.refresh(p)
 
     resp = await mark_fine_paid(p.fine_id)
     if resp.status_code != 200:
         # Em produção: compensação / re-tentativa
         raise HTTPException(status_code=502, detail="Could not mark fine as paid in loan-service")
+
+    db.commit()
+    db.refresh(p)
 
     return PaymentOut(id=p.id, user_id=p.user_id, fine_id=p.fine_id, amount_eur=float(p.amount_eur), method=p.method, status=p.status, paid_at=p.paid_at)

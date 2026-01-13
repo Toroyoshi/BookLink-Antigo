@@ -12,9 +12,9 @@ router = APIRouter()
 @router.get("/me", response_model=UserOut)
 def me(current=Depends(get_current_user), db: Session = Depends(get_db)):
     user = db.query(User).get(current["user_id"])
-    return UserOut(id=user.id, name=user.name, email=user.email, role=user.role, is_active=user.is_active)
+    return user
 
 @router.get("/{user_id}", response_model=UserOut)
 def get_user(user_id: int, _=Depends(require_roles("staff")), db: Session = Depends(get_db)):
     user = db.query(User).get(user_id)
-    return UserOut(id=user.id, name=user.name, email=user.email, role=user.role, is_active=user.is_active)
+    return user

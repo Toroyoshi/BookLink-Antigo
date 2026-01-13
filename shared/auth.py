@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 
@@ -38,7 +38,7 @@ def require_roles(*allowed: str):
         return user
     return dep
 
-def require_internal_token(x_internal_token: Optional[str]) -> None:
+def require_internal_token(x_internal_token: Optional[str] = Header(None)) -> None:
     from shared.settings import INTERNAL_SERVICE_TOKEN
     if not x_internal_token or x_internal_token != INTERNAL_SERVICE_TOKEN:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal token")

@@ -14,10 +14,15 @@ def loan_days_for_role(role: str) -> int:
     }.get(role, LOAN_DAYS_STUDENT)
 
 def now_utc() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+# def compute_due_at(role: str) -> datetime:
+#     return now_utc() + timedelta(days=loan_days_for_role(role))
 
 def compute_due_at(role: str) -> datetime:
-    return now_utc() + timedelta(days=loan_days_for_role(role))
+    exact_moment = now_utc() + timedelta(days=loan_days_for_role(role))
+    # Arredonda para o último segundo do dia
+    return exact_moment.replace(hour=23, minute=59, second=59)
 
 def compute_fine_amount(due_at: datetime, returned_at: datetime) -> float:
     if returned_at <= due_at:
